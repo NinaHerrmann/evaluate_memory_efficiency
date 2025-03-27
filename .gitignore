@@ -112,6 +112,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.idea/
 
 # Spyder project settings
 .spyderproject
@@ -215,4 +216,6 @@ fabric.properties
 # Custom Nina
 data/
 vars_*/
+*.txt
+*.csv
 # End of https://mrkandreev.name/snippets/gitignore-generator/#Python,PyCharm
