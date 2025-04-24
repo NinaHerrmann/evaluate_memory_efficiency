@@ -203,7 +203,7 @@ def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=
                 first = False
                 platforms = ['arduino:avr:uno', 'arduino:avr:leonardo', 'arduino:samd:mkr1000',
                              'arduino:samd:mkrgsm1400', 'arduino:esp32:unowifi',
-                             'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion']
+                             'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion', 'arduino:samd:nano_33_ble']
                 fileopen.write(";".join(config.keys()) + ";rank;train_score;test_score;estimateMemory;accuracy;random_state;")
                 fileopen.write(";".join([str(v) for v in platforms]) + ";\n")
 

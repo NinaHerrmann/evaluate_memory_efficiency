@@ -439,7 +439,7 @@ class LightGBM:
             ### Generates a C++ header file for the model ###
             ### Compiles the sketch using the Arduino CLI ###
             #print(sketch_path)
-            platforms = ['arduino:avr:uno', 'arduino:avr:leonardo', 'arduino:samd:mkr1000', 'arduino:samd:mkrgsm1400', 'arduino:esp32:unowifi', 'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion']
+            platforms = ['arduino:avr:uno', 'arduino:avr:leonardo', 'arduino:samd:mkr1000', 'arduino:samd:mkrgsm1400', 'arduino:esp32:unowifi', 'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion', 'arduino:samd:nano_33_ble']
             # arduino: avr:leonardo arduino:samd:mkr1000 arduino:samd:mkrgsm1400 arduino:esp32:unowifi adafruit:samd:feather_m0 raspberrypi:pi:pico
             for platform in platforms:
                 result = subprocess.run(['/opt/homebrew/bin/arduino-cli', 'compile', '--fqbn', platform, sketch_path],
