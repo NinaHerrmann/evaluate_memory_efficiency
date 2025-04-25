@@ -11,7 +11,7 @@ import pandas as pd
 from scipy import stats
 from scipy.stats import linregress
 from scipy.stats import randint, uniform
-from sklearn.metrics import accuracy_score, root_mean_squared_error
+from sklearn.metrics import accuracy_score, root_mean_squared_error, r2_score
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
@@ -53,11 +53,11 @@ def train_base_model(iterations, objective, fixed_hyperparameters, custom_hyperp
     if objective == "regression":
         scoring = {
             'memory_efficiency': CustomScorer(),
-            'accuracy': 'neg_root_mean_squared_error',
+            'accuracy': 'r2_score',
             'memory': SizeMetric(),
         }
         search_random = RandomizedSearchCV(
-            estimator=LightGBMRandomizedSearch(objective='regression', metric='rmse', verbosity=-1, num_threads=threads,
+            estimator=LightGBMRandomizedSearch(objective='regression', metric='r2_score', verbosity=-1, num_threads=threads,
                                                estimate_size=estimate),
             param_distributions=fixed_hyperparameters,
             n_iter=iterations,
@@ -211,7 +211,7 @@ def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=
             if task == "binary" or task == "multiclass":
                 accuracy = accuracy_score(y_test, model.predict(X_test))
             if task == "regression":
-                accuracy = root_mean_squared_error(y_test, model.predict(X_test)) # {accuracy:.4f};
+                accuracy = r2_score(y_test, model.predict(X_test)) # {accuracy:.4f};
             with file.open('a') as fileopen:
                 fileopen.write(";".join([str(v) for v in config.values()]) + ";")
                 fileopen.write(f"{rank};{train_score};{test_score:.4f};{model.model.estimateMemory()};{accuracy:.4f};{random_state};")
@@ -596,7 +596,8 @@ def run(dataset, iterations, rand_state, task="binary", train=True):
         le = LabelEncoder()
         y = le.fit_transform(y)
     X = MinMaxScaler().fit_transform(X)
-    base_folder = f"data/{dataset}"  # Base directory to save/load results to/from
+    basepath = "/Users/ninaherrmann/docs/Lehre/BA/steen/CodeInstructions/"
+    base_folder = f"{basepath}/data/{dataset}"  # Base directory to save/load results to/from
     if (train):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=rand_state)
         if task == 'multiclass':
