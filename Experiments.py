@@ -53,11 +53,11 @@ def train_base_model(iterations, objective, fixed_hyperparameters, custom_hyperp
     if objective == "regression":
         scoring = {
             'memory_efficiency': CustomScorer(),
-            'accuracy': 'r2_score',
+            'accuracy': 'r2',
             'memory': SizeMetric(),
         }
         search_random = RandomizedSearchCV(
-            estimator=LightGBMRandomizedSearch(objective='regression', metric='r2_score', verbosity=-1, num_threads=threads,
+            estimator=LightGBMRandomizedSearch(objective='regression', metric='r2', verbosity=-1, num_threads=threads,
                                                estimate_size=estimate),
             param_distributions=fixed_hyperparameters,
             n_iter=iterations,
@@ -202,8 +202,8 @@ def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=
             with file.open('a') as fileopen:
                 first = False
                 platforms = ['arduino:avr:uno', 'arduino:avr:leonardo', 'arduino:samd:mkr1000',
-                             'arduino:samd:mkrgsm1400', 'arduino:esp32:unowifi',
-                             'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion', 'arduino:samd:nano_33_iot']
+                             'arduino:samd:mkrgsm1400', 'arduino:samd:nano_33_iot',
+                             'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion']
                 fileopen.write(";".join(config.keys()) + ";rank;train_score;test_score;estimateMemory;accuracy;random_state;")
                 fileopen.write(";".join([str(v) for v in platforms]) + ";\n")
 
@@ -749,7 +749,7 @@ def main():
     train = args.train
     nrs = args.nrs
 
-    datasets = ["magic", "spambase", "statlog", "cycle", "concrete", "superconductor"]
+    datasets = ["cycle", "concrete", "superconductor"]
     for data in datasets:
         type = "binary"
         if data == "magic":
