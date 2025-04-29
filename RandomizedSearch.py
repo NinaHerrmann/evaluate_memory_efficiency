@@ -2,7 +2,7 @@ import numpy as np
 import lightgbm as lgb
 from sklearn.base import BaseEstimator
 from LightGBMConverter import LightGBM
-from sklearn.metrics import accuracy_score, root_mean_squared_error, mean_squared_error, log_loss
+from sklearn.metrics import r2_score, accuracy_score, mean_squared_error, log_loss
 import os
 import tempfile
 from sklearn.model_selection import train_test_split
@@ -314,7 +314,7 @@ class CustomScorer:
         """
         y_pred = estimator.predict(X)
         if estimator.model.objective == "regression":
-            accuracy = root_mean_squared_error(y, y_pred)
+            accuracy = r2_score(y, y_pred)
             accuracy = 1/(accuracy + 1e-5)
         else:
             accuracy = accuracy_score(y, y_pred)
@@ -407,7 +407,7 @@ class AccuracyImprovement:
         """
         y_pred = estimator.predict(X)
         if estimator.model.objective == "regression":
-            accuracy = root_mean_squared_error(y, y_pred)
+            accuracy = r2_score(y, y_pred)
         else:
             accuracy = accuracy_score(y, y_pred)
         percent_change = ((accuracy - self.base_score) / self.base_score) * 100

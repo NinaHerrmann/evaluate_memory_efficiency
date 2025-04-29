@@ -397,7 +397,7 @@ class LightGBM:
             int: Program storage size in bytes
         """
         unique_id = uuid.uuid4()
-        base_path = os.path.join(tempfile.gettempdir(), "LightGBM-Experiment")
+        base_path = '/scratch/tmp/n_herr03/ecai/arduinosketch'
         
         unique_dir = os.path.join(base_path, f"{unique_id}")
         sketch_dir = os.path.join(unique_dir, "sketch")
@@ -439,10 +439,10 @@ class LightGBM:
             ### Generates a C++ header file for the model ###
             ### Compiles the sketch using the Arduino CLI ###
             #print(sketch_path)
-            platforms = ['arduino:avr:uno', 'arduino:avr:leonardo', 'arduino:samd:mkr1000', 'arduino:samd:mkrgsm1400', 'arduino:esp32:unowifi', 'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion', 'arduino:samd:nano_33_ble']
+            platforms = ['arduino:avr:uno', 'arduino:avr:leonardo', 'arduino:samd:mkr1000', 'arduino:samd:mkrgsm1400', 'arduino:samd:nano_33_iot', 'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion']
             # arduino: avr:leonardo arduino:samd:mkr1000 arduino:samd:mkrgsm1400 arduino:esp32:unowifi adafruit:samd:feather_m0 raspberrypi:pi:pico
             for platform in platforms:
-                result = subprocess.run(['/opt/homebrew/bin/arduino-cli', 'compile', '--fqbn', platform, sketch_path],
+                result = subprocess.run(['/home/n/n_herr03/bin/arduino-cli', 'compile', '--fqbn', platform, sketch_path],
                                     capture_output=True, text=True)
                 ### Error value ###
                 program_storage = 999999
@@ -463,6 +463,7 @@ class LightGBM:
             if os.path.exists(unique_dir):
                try:
                    shutil.rmtree(unique_dir)
+                   shutil.rmtree('/home/n/n_herr03/.cache/arduino/sketches')
                except PermissionError as e:
                    print(f"Permission error: {e}")
     

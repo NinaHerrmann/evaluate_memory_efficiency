@@ -11,7 +11,7 @@ import pandas as pd
 from scipy import stats
 from scipy.stats import linregress
 from scipy.stats import randint, uniform
-from sklearn.metrics import accuracy_score, root_mean_squared_error, r2_score
+from sklearn.metrics import accuracy_score, mean_squared_error, r2_score
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
@@ -203,7 +203,7 @@ def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=
                 first = False
                 platforms = ['arduino:avr:uno', 'arduino:avr:leonardo', 'arduino:samd:mkr1000',
                              'arduino:samd:mkrgsm1400', 'arduino:esp32:unowifi',
-                             'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion', 'arduino:samd:nano_33_ble']
+                             'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion', 'arduino:samd:nano_33_iot']
                 fileopen.write(";".join(config.keys()) + ";rank;train_score;test_score;estimateMemory;accuracy;random_state;")
                 fileopen.write(";".join([str(v) for v in platforms]) + ";\n")
 
@@ -504,7 +504,7 @@ custom_hyperparameters = {
 
 
 def load_data(name, id, task="binary", num_class=1):
-    data_folder = "data"
+    data_folder = "/scratch/tmp/n_herr03/ecai/data"
     X_file = os.path.join(data_folder, name + "X.npy")
     y_file = os.path.join(data_folder, name + "Y.npy")
     # Check if the dataset already exists
@@ -596,8 +596,7 @@ def run(dataset, iterations, rand_state, task="binary", train=True):
         le = LabelEncoder()
         y = le.fit_transform(y)
     X = MinMaxScaler().fit_transform(X)
-    basepath = "/Users/ninaherrmann/docs/Lehre/BA/steen/CodeInstructions/"
-    base_folder = f"{basepath}/data/{dataset}"  # Base directory to save/load results to/from
+    base_folder = f"/scratch/tmp/n_herr03/ecai/data/{dataset}"  # Base directory to save/load results to/from
     if (train):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.1, random_state=rand_state)
         if task == 'multiclass':
@@ -728,8 +727,8 @@ def run(dataset, iterations, rand_state, task="binary", train=True):
         best_models = evaluate(random_search.cv_results_, X_train, y_train, X_test, y_test, folder, rand_state, top=iterations, task=task, generate_outputs=False)
 
 
-    analyzeResults(dataset, random_search.cv_results_, folder)
-    analyze_grid_search(grid_search.cv_results_, folder)
+    #analyzeResults(dataset, random_search.cv_results_, folder)
+    #analyze_grid_search(grid_search.cv_results_, folder)
 
 
 def main():
