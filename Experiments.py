@@ -27,7 +27,7 @@ def round_numbers(df):
     newdf[numerical_cols] = newdf[numerical_cols].apply(lambda x: x.round(2))
     return newdf
 
-def train_base_model(iterations, objective, fixed_hyperparameters, custom_hyperparameters, X_train, y_train, rand_state, num_class=6, threads=4,
+def train_base_model(iterations, objective, fixed_hyperparameters, custom_hyperparameters, X_train, y_train, rand_state, num_class=6, threads=16,
                      estimate=False):
     """
     Trains the base LightGBM model using RandomizedSearchCV with custom scoring metrics for model performance
@@ -54,11 +54,11 @@ def train_base_model(iterations, objective, fixed_hyperparameters, custom_hyperp
     if objective == "regression":
         scoring = {
             'memory_efficiency': CustomScorer(),
-            'accuracy': 'r2',
+            'accuracy': 'neg_root_mean_squared_error',
             'memory': SizeMetric(),
         }
         search_random = RandomizedSearchCV(
-            estimator=LightGBMRandomizedSearch(objective='regression', metric='r2', verbosity=-1, num_threads=threads,
+            estimator=LightGBMRandomizedSearch(objective='regression', metric='rmse', verbosity=-1, num_threads=threads,
                                                estimate_size=estimate),
             param_distributions=fixed_hyperparameters,
             n_iter=iterations,
@@ -108,7 +108,7 @@ def train_base_model(iterations, objective, fixed_hyperparameters, custom_hyperp
             refit='memory_efficiency',
             verbose=4
         )
-    search_random.fit(X_train, y_train)
+    search_random.fit(X_train, y_train, palma=False)
     model = search_random.best_estimator_
     best_params = search_random.best_params_
     combined = {**custom_hyperparameters}
@@ -162,7 +162,7 @@ def load_variables(folder_path: str) -> dict:
             for f in Path(folder_path).glob("*.pkl")}
 
 
-def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=10, task="binary", generate_outputs=True):
+def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=10, task="binary", generate_outputs=False, palma=True):
     """
     Evaluates the top performing model configurations based on memory efficiency.
 
@@ -205,7 +205,7 @@ def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=
         if task == "regression":
             model = LightGBMRandomizedSearch(objective='regression', metric='rmse', verbosity=-1, **config)
 
-        model.fit(X_train, y_train)
+        model.fit(X_train, y_train, palma=palma)
         trained_models.append(model)
         file = Path(file_path)
         if first:
@@ -215,8 +215,7 @@ def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=
                              'arduino:samd:mkrgsm1400', 'arduino:samd:nano_33_iot',
                              'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion']
                 fileopen.write(";".join(config.keys()) + ";rank;train_score;test_score;estimateMemory;accuracy;random_state;")
-                fileopen.write(";".join([str(v) for v in platforms]) + ";")
-                fileopen.write(";".join([str(v) for v in platformdynamic]) + ";\n")
+                fileopen.write(";".join([str(v) for v in platforms]) + ";\n")
 
         if model is not None:
             if task == "binary" or task == "multiclass":
@@ -226,9 +225,9 @@ def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=
             with file.open('a') as fileopen:
                 fileopen.write(";".join([str(v) for v in config.values()]) + ";")
                 fileopen.write(f"{rank};{train_score};{test_score:.4f};{model.model.estimateMemory()};{accuracy:.4f};{random_state};")
-                liststorage, listdynamic = model.model.returnMemory()
-                fileopen.write(";".join([str(v) for v in liststorage]) + ";")
-                fileopen.write(";".join([str(v) for v in listdynamic]) + ";\n")
+                liststorage, listdynamic = model.model.returnMemory(palma)
+                fileopen.write(";".join([str(v) for v in liststorage]) + ";\n")
+                # fileopen.write(";".join([str(v) for v in listdynamic]) + ";\n")
 
     if generate_outputs:
         for i, model in enumerate(trained_models):
@@ -477,7 +476,7 @@ def analyzeResults(dataset, cv_results, path):
     analyze_correlations(dataset, continuous_params, results_df, metrics, categorical_params, path)
 
 
-threads = 4
+threads = 16
 estimate_size = False
 
 fixed_hyperparameters = {
@@ -583,7 +582,7 @@ def callsearch(iterations, task, num_classes, threads, estimate_size, param_dist
         )
 
 
-def run(dataset, iterations, rand_state, task="binary", train=True):
+def run(dataset, iterations, rand_state, task="binary", train=True, palma=True):
     if dataset == "magic":
         # Define dataset paths
         X, y = load_data("magic", 159)
@@ -656,7 +655,7 @@ def run(dataset, iterations, rand_state, task="binary", train=True):
         elif task == 'regression':
             scoring = {
                 'memory_efficiency': CustomScorer(),
-                'accuracy': 'r2_score',
+                'accuracy': 'neg_root_mean_squared_error',
                 'memory': SizeMetric(),
                 'accuracy_improvement': AccuracyImprovement(-base_score),
                 'memory_improvement': SizeImprovement(base_size),
@@ -667,7 +666,7 @@ def run(dataset, iterations, rand_state, task="binary", train=True):
         else :
             raise ValueError(f"task {task} not found. Cannot continue")
 
-        random_search.fit(X_train, y_train)
+        random_search.fit(X_train, y_train, palma=palma)
         grid = {
             ### QUANTIZATION HYPERPARAMETERS ###
             "enable_quantization": [True],
@@ -721,7 +720,7 @@ def run(dataset, iterations, rand_state, task="binary", train=True):
         else:
             raise ValueError(f"task {task} not found. Cannot continue")
 
-        grid_search.fit(X_train, y_train)
+        grid_search.fit(X_train, y_train, palma=palma)
         folder = save_variables(f"i{iterations}_d{dataset}_t{task}",
             {"random_search": random_search, "search_random": search_random, "param_distributions": param_distributions,
              "random_search.cv_results_": random_search.cv_results_, "base_model": base_model,
@@ -731,13 +730,9 @@ def run(dataset, iterations, rand_state, task="binary", train=True):
         folder = "/Users/ninaherrmann/docs/Lehre/BA/steen/CodeInstructions/memory"  # Folder in the base directory to load results from
         loaded_vars = load_variables(folder)
         random_search = loaded_vars["random_search"]
-        search_random = loaded_vars["search_random"]
-        param_distributions = loaded_vars["param_distributions"]
-        base_model = loaded_vars["base_model"]
-        grid_search = loaded_vars["grid_search"]
 
     if train:
-        best_models = evaluate(random_search.cv_results_, X_train, y_train, X_test, y_test, folder, rand_state, top=iterations, task=task, generate_outputs=False)
+        best_models = evaluate(random_search.cv_results_, X_train, y_train, X_test, y_test, folder, rand_state, top=iterations, task=task, generate_outputs=False, palma=palma)
 
 
     #analyzeResults(dataset, random_search.cv_results_, folder)
@@ -753,13 +748,17 @@ def main():
                         help='Number of random states')
     parser.add_argument('--train', action='store_true', help='Should model be trained?')
     parser.add_argument('--no-train', action='store_false', dest='train', help='Do not train the model')
+    parser.add_argument('--palma', action='store_true', help='Should run on palma?')
+    parser.add_argument('--no-palma', action='store_false', dest='palma', help='Do not run on palma')
     parser.set_defaults(train=True)
+    parser.set_defaults(palma=True)
 
     # Parse the command line arguments
     args = parser.parse_args()
 
     iterations = args.iterations
     train = args.train
+    palma = args.palma
     nrs = args.nrs
 
     datasets = ["cycle", "concrete", "superconductor"]
@@ -779,10 +778,9 @@ def main():
             type = "regression"
         for i in range(int(nrs)):
             random.seed(i)
-            random_state = random.getstate()
             random_number = random.randint(0, 4294967295)
-            print(f"Random state {i}: {random_number}, Dataset: {data}, Type: {type}, Iterations: {iterations}, Train: {train}")
-            run(data, iterations, random_number, task=type, train=train)
+            print(f"Random state {i}: {random_number}, Dataƒset: {data}, Type: {type}, Iterations: {iterations}, Train: {train}")
+            run(data, iterations, random_number, task=type, train=train, palma=palma)
 
 
 if __name__ == "__main__":

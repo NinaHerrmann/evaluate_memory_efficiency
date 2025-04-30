@@ -70,6 +70,7 @@ class LightGBM:
     beta: float
     s: float
     z: float
+    palma: bool
 
     def __init__(self):
         self.trees = []
@@ -84,7 +85,8 @@ class LightGBM:
         self.objective = ""
         self.quantization_diff = ""
         self.quantization_type = ""
-        
+        self.palma = True
+
     def load(self, filename: str) -> Tuple[List[Tree], List[int], List[float], int]:
         """Loads a LightGBM model from a text file.
 
@@ -380,7 +382,7 @@ class LightGBM:
             condition_mem += len(tree.feature_ids) * 1 #Each split is a estimated as single byte
         return threshold_mem + leaf_mem + condition_mem
     
-    def returnMemory(self):
+    def returnMemory(self, palma=True):
         """Compiles the model to read the memory usage on an Arduino device.
         This method will only work if the Arduino cli is installed and is in PATH.
         Requires an Arduiono UNO device to be connected or be known to the computer.
@@ -444,8 +446,13 @@ class LightGBM:
 
             # arduino: avr:leonardo arduino:samd:mkr1000 arduino:samd:mkrgsm1400 arduino:esp32:unowifi adafruit:samd:feather_m0 raspberrypi:pi:pico
             for platform in platforms:
-                result = subprocess.run(['/home/n/n_herr03/bin/arduino-cli', 'compile', '--fqbn', platform, sketch_path],
+                if palma:
+                    result = subprocess.run(['/home/n/n_herr03/bin/arduino-cli', 'compile', '--fqbn', platform, sketch_path],
                                     capture_output=True, text=True)
+                else:
+                    result = subprocess.run(['arduino-cli', 'compile', '--fqbn', platform, sketch_path],
+                                    capture_output=True, text=True)
+
                 ### Error value ###
                 program_storage = 999999
                 dynamic_storage = 999999
@@ -463,9 +470,12 @@ class LightGBM:
                         program_storage = int(storage_match.group(1))
                     elif (overflow_match := re.search(r"region `text' overflowed by (\d+) bytes", result.stderr)):
                         print(f"Overflow detected by {int(overflow_match.group(1))} bytes")
-                        program_storage = 999999
-                liststorage.append(program_storage)
-                listdynamic.append(dynamic_storage)
+                        if platform == 'arduino:avr:uno':
+                            program_storage = 131072 + int(overflow_match.group(1))
+                        else:
+                            program_storage = 999999
+                    liststorage.append(program_storage)
+                    listdynamic.append(dynamic_storage)
             return liststorage, listdynamic
 
         finally:

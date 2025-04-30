@@ -3,7 +3,7 @@ import lightgbm as lgb
 from sklearn.base import BaseEstimator
 from LightGBMConverter import LightGBM
 
-from sklearn.metrics import accuracy_score, r2_score
+from sklearn.metrics import accuracy_score, mean_squared_error
 import os
 import tempfile
 from sklearn.model_selection import train_test_split
@@ -123,12 +123,13 @@ class LightGBMRandomizedSearch(BaseEstimator):
         ### INTERNAL VALUES ###
         self.lgb = None
         self.model = None
-        self.model_size = []
+        self.model_size = None
+        self.model_list = []
         self.dynamic_size = []
         self.features = None
         self.thresholds = None
     
-    def fit(self, X, y):
+    def fit(self, X, y, palma):
         """
         Fits the LightGBM model to the training data and applies optimization techniques.
 
@@ -251,9 +252,11 @@ class LightGBMRandomizedSearch(BaseEstimator):
         ### Read the model size after compilation or estimate it  ###
         ### Set estimate_size to True if returnMemory() does not work. ###
         if self.estimate_size:
-            self.model_size[0] = self.model.estimateMemory()
+            self.model_size = self.model.estimateMemory()
         else:
-            self.model_size, self.dynamic_size = self.model.returnMemory()
+            memory, dyno = self.model.returnMemory(palma)
+            self.model_list = memory
+            self.model_size = memory[0]
             
     def dequantize(self, output):
         """
@@ -316,12 +319,13 @@ class CustomScorer:
         """
         y_pred = estimator.predict(X)
         if estimator.model.objective == "regression":
-            accuracy = r2_score(y, y_pred)
-            accuracy = 1/(accuracy + 1e-5)
+            mse = mean_squared_error(y, y_pred)
+            accuracy = np.sqrt(mse)
+            accuracy = 1 / (accuracy + 1e-5)
         else:
             accuracy = accuracy_score(y, y_pred)
             accuracy = np.exp(-1 / (accuracy + 1e-5)) * accuracy
-        return accuracy / estimator.model_size[0]
+        return accuracy / estimator.model_size
     
 class SizeMetric:
     """Metric that returns the model size in memory."""
@@ -341,7 +345,7 @@ class SizeMetric:
         Returns
             Model size in memory.
         """
-        return estimator.model_size[0]
+        return estimator.model_size
 
     
 class ThresholdMetric:
@@ -409,7 +413,8 @@ class AccuracyImprovement:
         """
         y_pred = estimator.predict(X)
         if estimator.model.objective == "regression":
-            accuracy = r2_score(y, y_pred)
+            mse = mean_squared_error(y, y_pred)
+            accuracy = np.sqrt(mse)
         else:
             accuracy = accuracy_score(y, y_pred)
         percent_change = ((accuracy - self.base_score) / self.base_score) * 100
@@ -438,5 +443,5 @@ class SizeImprovement:
         Returns:
             Percentage improvement in model size.
         """
-        percent_change = ((estimator.model_size[0]- self.base_size) / self.base_size) * 100
+        percent_change = ((estimator.model_size - self.base_size) / self.base_size) * 100
         return percent_change
