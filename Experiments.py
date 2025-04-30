@@ -633,6 +633,7 @@ def run(dataset, iterations, rand_state, task="binary", train=True, palma=True):
                                                                                                      custom_hyperparameters,
                                                                                                      X_train, y_train,
                                                                                                      rand_state,
+                                                                                                     num_class=1,
                                                                                                      threads=threads,
                                                                                                      estimate=estimate_size)
         print(f"Base score: {base_score} \n Base size: {base_size}")
