@@ -2,7 +2,8 @@ import numpy as np
 import lightgbm as lgb
 from sklearn.base import BaseEstimator
 from LightGBMConverter import LightGBM
-from sklearn.metrics import r2_score, accuracy_score, mean_squared_error, log_loss
+
+from sklearn.metrics import accuracy_score, r2_score
 import os
 import tempfile
 from sklearn.model_selection import train_test_split
@@ -123,6 +124,7 @@ class LightGBMRandomizedSearch(BaseEstimator):
         self.lgb = None
         self.model = None
         self.model_size = []
+        self.dynamic_size = []
         self.features = None
         self.thresholds = None
     
@@ -251,7 +253,7 @@ class LightGBMRandomizedSearch(BaseEstimator):
         if self.estimate_size:
             self.model_size[0] = self.model.estimateMemory()
         else:
-            self.model_size = self.model.returnMemory()
+            self.model_size, self.dynamic_size = self.model.returnMemory()
             
     def dequantize(self, output):
         """

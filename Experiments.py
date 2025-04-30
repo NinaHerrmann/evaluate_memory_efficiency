@@ -1,6 +1,7 @@
 import argparse
 import os
 import pickle
+import re
 from datetime import datetime
 from itertools import combinations
 from pathlib import Path
@@ -11,7 +12,7 @@ import pandas as pd
 from scipy import stats
 from scipy.stats import linregress
 from scipy.stats import randint, uniform
-from sklearn.metrics import accuracy_score, mean_squared_error, r2_score
+from sklearn.metrics import accuracy_score, r2_score
 from sklearn.model_selection import RandomizedSearchCV, GridSearchCV
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
@@ -132,8 +133,17 @@ def save_variables(settings: str, variables: dict, base_path: str) -> str:
     folder = Path(base_path) / f"vars_{datetime.now().strftime('%Y%m%d_%H%M%S')}_{settings}"
     folder.mkdir(parents=True, exist_ok=True)
     for name, value in variables.items():
-        with open(folder / f"{name}.pkl", "wb") as f:
-            pickle.dump(value, f)
+        # if isinstance(value, re.Match):
+        #     # Extract the matched text or other relevant info
+        #     value_to_dump = value.group()
+        # else:
+        #     value_to_dump = value
+        try:
+            with open(folder / f"{name}.pkl", "wb") as f:
+                pickle.dump(value, f)
+        except TypeError:
+            # Handle the error, e.g., log a warning or skip this variable
+            print(f"Warning: Cannot pickle {name} ({type(value).__name__})")
     return str(folder)
 
 
@@ -205,7 +215,8 @@ def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=
                              'arduino:samd:mkrgsm1400', 'arduino:samd:nano_33_iot',
                              'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion']
                 fileopen.write(";".join(config.keys()) + ";rank;train_score;test_score;estimateMemory;accuracy;random_state;")
-                fileopen.write(";".join([str(v) for v in platforms]) + ";\n")
+                fileopen.write(";".join([str(v) for v in platforms]) + ";")
+                fileopen.write(";".join([str(v) for v in platformdynamic]) + ";\n")
 
         if model is not None:
             if task == "binary" or task == "multiclass":
@@ -215,7 +226,9 @@ def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=
             with file.open('a') as fileopen:
                 fileopen.write(";".join([str(v) for v in config.values()]) + ";")
                 fileopen.write(f"{rank};{train_score};{test_score:.4f};{model.model.estimateMemory()};{accuracy:.4f};{random_state};")
-                fileopen.write(";".join([str(v) for v in model.model.returnMemory()]) + ";\n")
+                liststorage, listdynamic = model.model.returnMemory()
+                fileopen.write(";".join([str(v) for v in liststorage]) + ";")
+                fileopen.write(";".join([str(v) for v in listdynamic]) + ";\n")
 
     if generate_outputs:
         for i, model in enumerate(trained_models):
@@ -643,7 +656,7 @@ def run(dataset, iterations, rand_state, task="binary", train=True):
         elif task == 'regression':
             scoring = {
                 'memory_efficiency': CustomScorer(),
-                'accuracy': 'neg_root_mean_squared_error',
+                'accuracy': 'r2_score',
                 'memory': SizeMetric(),
                 'accuracy_improvement': AccuracyImprovement(-base_score),
                 'memory_improvement': SizeImprovement(base_size),

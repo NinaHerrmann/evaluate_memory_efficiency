@@ -42,7 +42,7 @@ model_counters = {'Pruned': 0, 'CEGB': 0, 'Pre-Pruned':0,
               'Quant-8': 0,
               'Merging': 0}
 for data in datasets:
-    df = pd.read_csv('collectivedata/' + f'{data}' + '/collectivedata.csv', sep=';', index_col=False)
+    df = pd.read_csv('collectivedata/' + f'{data}' + '/collectivedatauno.csv', sep=';', index_col=False)
     print(df)
     df['Trade-Off'] = df['accuracy'] / df['returnMemory']
     pruned = df[(df['enable_pruning'] == True) & (df['enable_prepruning'] == False) & (df['enable_cegb'] == False) & (df['enable_merging'] == False)& (df['enable_quantization'] == False)]

@@ -406,6 +406,7 @@ class LightGBM:
         sketch_path = os.path.join(sketch_dir, "sketch.ino")
         self.generate(sketch_dir, "model")
         liststorage = []
+        listdynamic = []
         ### Creates a sketch ino file that uses the generated model header to make three predictions###
         with open(sketch_path, "w") as sketch_file:
             sketch_file.write('#include "model.h"\n\n')
@@ -440,24 +441,32 @@ class LightGBM:
             ### Compiles the sketch using the Arduino CLI ###
             #print(sketch_path)
             platforms = ['arduino:avr:uno', 'arduino:avr:leonardo', 'arduino:samd:mkr1000', 'arduino:samd:mkrgsm1400', 'arduino:samd:nano_33_iot', 'esp32:esp32:adafruit_feather_esp32_v2', 'esp32:esp32:sparklemotion']
+
             # arduino: avr:leonardo arduino:samd:mkr1000 arduino:samd:mkrgsm1400 arduino:esp32:unowifi adafruit:samd:feather_m0 raspberrypi:pi:pico
             for platform in platforms:
                 result = subprocess.run(['/home/n/n_herr03/bin/arduino-cli', 'compile', '--fqbn', platform, sketch_path],
                                     capture_output=True, text=True)
                 ### Error value ###
                 program_storage = 999999
+                dynamic_storage = 999999
 
                 ### Parses the output to get the program storage size ###
                 if result.stdout:
                     storage_match = re.search(r'Sketch uses (\d+) bytes', result.stdout)
 
+                    dynamic = re.search(r'Global variables use (\d+) bytes', result.stdout)
+                    if dynamic:
+                        dynamic_storage = int(dynamic.group(1))
+                    else:
+                        dynamic_storage = 999999
                     if storage_match:
                         program_storage = int(storage_match.group(1))
                     elif (overflow_match := re.search(r"region `text' overflowed by (\d+) bytes", result.stderr)):
                         print(f"Overflow detected by {int(overflow_match.group(1))} bytes")
-                        program_storage = 131072 + int(overflow_match.group(1))
+                        program_storage = 999999
                 liststorage.append(program_storage)
-            return liststorage
+                listdynamic.append(dynamic_storage)
+            return liststorage, listdynamic
 
         finally:
             if os.path.exists(unique_dir):
