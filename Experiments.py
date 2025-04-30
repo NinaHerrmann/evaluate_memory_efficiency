@@ -27,7 +27,7 @@ def round_numbers(df):
     newdf[numerical_cols] = newdf[numerical_cols].apply(lambda x: x.round(2))
     return newdf
 
-def train_base_model(iterations, objective, fixed_hyperparameters, custom_hyperparameters, X_train, y_train, rand_state, num_class=6, threads=16,
+def train_base_model(iterations, objective, fixed_hyperparameters, custom_hyperparameters, X_train, y_train, rand_state, num_class, threads=16,
                      estimate=False):
     """
     Trains the base LightGBM model using RandomizedSearchCV with custom scoring metrics for model performance
@@ -162,7 +162,7 @@ def load_variables(folder_path: str) -> dict:
             for f in Path(folder_path).glob("*.pkl")}
 
 
-def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=10, task="binary", generate_outputs=False, palma=True):
+def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, num_class, top=10, task="binary", generate_outputs=False, palma=True):
     """
     Evaluates the top performing model configurations based on memory efficiency.
 
@@ -200,7 +200,7 @@ def evaluate(results, X_train, y_train, X_test, y_test, path, random_state, top=
             model = LightGBMRandomizedSearch(objective='binary', num_class=1, metric='binary_logloss', verbosity=-1,
                                              **config)
         if task == "multiclass":
-            model = LightGBMRandomizedSearch(objective='multiclass', num_class=7, metric='multi_logloss', verbosity=-1,
+            model = LightGBMRandomizedSearch(objective='multiclass', num_class=num_class, metric='multi_logloss', verbosity=-1,
                                              **config)
         if task == "regression":
             model = LightGBMRandomizedSearch(objective='regression', metric='rmse', verbosity=-1, **config)
@@ -600,6 +600,13 @@ def run(dataset, iterations, rand_state, task="binary", train=True, palma=True):
         X, y = load_data("superconductor", 464)
     elif dataset == "gas":
         X, y = loadgasdata()
+    elif dataset == "wine":
+        X, y = load_data("wine", 186)
+    elif dataset == "mushroom":
+        X, y = load_data("mushroom", 73)
+    elif dataset == "drybean":
+        num_classes = 7
+        X, y = load_data("drybean", 602)
     else:
         raise ValueError(f"Dataset {dataset} not found. Cannot continue")
 
@@ -694,7 +701,7 @@ def run(dataset, iterations, rand_state, task="binary", train=True, palma=True):
             )
         elif task == 'multiclass':
             grid_search = GridSearchCV(
-                estimator=LightGBMRandomizedSearch(objective='multiclass', num_class=6, metric='multi_logloss',
+                estimator=LightGBMRandomizedSearch(objective='multiclass', num_class=num_classes, metric='multi_logloss',
                                                    verbosity=-1,
                                                    num_threads=threads),
                 param_grid=param_grid,
@@ -732,7 +739,7 @@ def run(dataset, iterations, rand_state, task="binary", train=True, palma=True):
         random_search = loaded_vars["random_search"]
 
     if train:
-        best_models = evaluate(random_search.cv_results_, X_train, y_train, X_test, y_test, folder, rand_state, top=iterations, task=task, generate_outputs=False, palma=palma)
+        best_models = evaluate(random_search.cv_results_, X_train, y_train, X_test, y_test, folder, rand_state, num_class=num_classes, top=iterations, task=task, generate_outputs=False, palma=palma)
 
 
     #analyzeResults(dataset, random_search.cv_results_, folder)
@@ -776,10 +783,16 @@ def main():
             type = "regression"
         if data == "superconductor":
             type = "regression"
+        if data == "wine":
+            type = "regression"
+        if data == "mushroom":
+            type = "binary"
+        if data == "drybean":
+            type = "multiclass"
         for i in range(int(nrs)):
             random.seed(i)
             random_number = random.randint(0, 4294967295)
-            print(f"Random state {i}: {random_number}, Dataƒset: {data}, Type: {type}, Iterations: {iterations}, Train: {train}")
+            print(f"Random state {i}: {random_number}, Dataset: {data}, Type: {type}, Iterations: {iterations}, Train: {train}")
             run(data, iterations, random_number, task=type, train=train, palma=palma)
 
 
